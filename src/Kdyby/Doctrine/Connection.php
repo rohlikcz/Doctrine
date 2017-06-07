@@ -23,6 +23,9 @@ use Tracy;
 
 /**
  * @author Filip Procházka <filip@prochazka.su>
+ * @method onPostBegin()
+ * @method onPostCommit()
+ * @method onPostRollback()
  */
 class Connection extends Doctrine\DBAL\Connection
 {
@@ -41,6 +44,10 @@ class Connection extends Doctrine\DBAL\Connection
 
 	/** @deprecated */
 	const POSTGRE_ERR_UNIQUE = 23505; // todo: verify, source: http://www.postgresql.org/docs/8.2/static/errcodes-appendix.html
+
+	public $onPostBegin = [];
+	public $onPostCommit = [];
+	public $onPostRollback = [];
 
 	/**
 	 * @var Doctrine\ORM\EntityManager
@@ -586,6 +593,33 @@ class Connection extends Doctrine\DBAL\Connection
 		}
 
 		ObjectMixin::remove($this, $name);
+	}
+
+
+
+	public function beginTransaction()
+	{
+		parent::beginTransaction();
+		$this->onPostBegin();
+	}
+
+
+
+	public function commit()
+	{
+		$shouldCallPostCommit = $this->getTransactionNestingLevel() === 1;
+		parent::commit();
+		if ($shouldCallPostCommit) {
+			$this->onPostCommit();
+		}
+	}
+
+
+
+	public function rollBack()
+	{
+		parent::rollBack();
+		$this->onPostRollback();
 	}
 
 }
